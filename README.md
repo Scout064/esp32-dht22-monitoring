@@ -84,6 +84,10 @@ curl -X POST http://192.168.1.200/api/reboot?key=secret123
 3. Monitor Serial for IP (115200 baud).
 4. Access your ESP32 via browser: `http://<ESP32-IP>/docs`
 
+## :electric_plug: Connection Diagram
+![connection_transparent](https://github.com/user-attachments/assets/a8151f49-4989-472d-b18e-3ea33c342245)
+
+
 ## 📌 Requirements
 - ESP32 (DevKit or equivalent)
 - DHT22 sensor (wired to GPIO5)
