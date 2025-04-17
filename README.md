@@ -110,4 +110,4 @@ scrape_configs:
 
 Built with ❤️ using [ESPAsyncWebServer](https://github.com/me-no-dev/ESPAsyncWebServer)
 
-> For issues or contributions, feel free to ([open a GitHub issue](https://github.com/Scout064/esp32-c6-dht22-monitoring))
+> For issues or contributions, feel free to ([open a GitHub issue](https://github.com/Scout064/esp32-dht22-monitoring))
