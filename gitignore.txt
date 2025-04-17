@@ -1,0 +1,3 @@
+# ignore ALL .md files
+*.MD
+*.md
