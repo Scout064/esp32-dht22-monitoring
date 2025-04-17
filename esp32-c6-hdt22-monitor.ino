@@ -308,6 +308,8 @@ void setup(){
     doc["uptime"] = millis() / 1000;
     doc["ip"] = WiFi.localIP().toString();
     doc["ssid"] = ssid;
+    doc["firmware"] = firmwareVersion;
+    doc["buildtime"] = buildTime;
     String response;
     serializeJson(doc, response);
     request->send(200, "application/json", response);
