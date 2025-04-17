@@ -147,7 +147,7 @@ const char openapi_html[] PROGMEM = R"rawliteral(
         "/api/reboot": { post: { summary: "Reboot Device", parameters: [{ name: "key", in: "query", required: true, schema: { type: "string" } }], responses: { 200: { description: "Rebooting" } } } },
         "/api/factory-reset": { post: { summary: "Factory Reset", parameters: [{ name: "key", in: "query", required: true, schema: { type: "string" } }], responses: { 200: { description: "Resetting" } } } },
         "/metrics": { get: { summary: "Prometheus Metrics", responses: { 200: { description: "Exposes Prometheus format metrics" } } } },
-        "/api/status": { get: { summary: "Device Status", responses: { 200: { description: "Returns temperature, humidity, IP, uptime" } } } }
+        "/api/status": { get: { summary: "Device Status", responses: { 200: { description: "Returns temperature, humidity, IP, uptime" } } } },
         "/update": { post: { summary: "OTA Upload", parameters: [{ name: "key", in: "query", required: true, schema: { type: "string" } }], requestBody: { content: { "multipart/form-data": { schema: { type: "object", properties: { update: { type: "string", format: "binary" } } } } }, required: true }, responses: { 200: { description: "Firmware update result" } } } }
       }
     };
