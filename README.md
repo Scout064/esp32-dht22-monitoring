@@ -55,7 +55,7 @@ Firmware for ESP32 that exposes a web server and REST API to access DHT22 sensor
 |--------|----------------|------|-------------------------------------|
 | GET    | `/api/logs`    | ✅   | Returns last 10 log events          |
 | GET    | `/metrics`     | ❌   | Prometheus metrics format for scrape |
-| GET    | `/api/status`  | ❌   | JSON with temp, humidity, uptime, IP, SSID |
+| GET    | `/api/status`  | ❌   | JSON with temp, humidity, uptime, IP, SSID, FW Version, Buildtime |
 
 ### API Docs (Swagger)
 | Method | Path     | Auth | Description               |
