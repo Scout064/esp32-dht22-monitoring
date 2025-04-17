@@ -78,21 +78,20 @@ curl -X POST http://192.168.1.200/api/reboot?key=secret123
 | `config`  | `interval`  | Sensor polling interval (ms)    |
 | `auth`    | `adminKey`  | Admin key for auth-protected routes |
 
-## 🚀 Getting Started
-1. Connect DHT22 sensor to GPIO 5.
-2. Flash firmware to ESP32.
-3. Monitor Serial for IP (115200 baud).
-4. Access your ESP32 via browser: `http://<ESP32-IP>/docs`
-
-## :electric_plug: Connection Diagram
-![connection](https://github.com/user-attachments/assets/c09dd7ac-c429-49e9-b580-26d1cb084c49)
-
-
 ## 📌 Requirements
 - ESP32 (DevKit or equivalent)
 - DHT22 sensor (wired to GPIO5)
 - Arduino IDE or PlatformIO
 - WiFi access
+
+## :electric_plug: Connection Diagram
+![connection](https://github.com/user-attachments/assets/c09dd7ac-c429-49e9-b580-26d1cb084c49)
+
+## 🚀 Getting Started
+1. Connect DHT22 sensor to GPIO 5.
+2. Flash firmware to ESP32.
+3. Monitor Serial for IP (115200 baud).
+4. Access your ESP32 via browser: `http://<ESP32-IP>/docs`
 
 ## 📊 Prometheus Integration
 Add this to your `prometheus.yml` scrape config:
