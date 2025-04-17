@@ -1,6 +1,5 @@
 // ESP32 DHT22 Sensor Web API Server
 // Provides RESTful endpoints to access temperature/humidity, update config, and manage device
-// Author: Code Copilot
 
 #include "WiFi.h"
 #include "ESPAsyncWebServer.h"
