@@ -8,6 +8,11 @@
 #include <DHT.h>
 #include <ArduinoJson.h>
 #include <Preferences.h>
+#include <Update.h>
+
+// Define Firmware Version
+const char* firmwareVersion = "1.1.0";
+const char* buildTime = __DATE__ " " __TIME__;
 
 // Network Credentials - loaded from Preferences
 String ssid, password;
@@ -128,7 +133,7 @@ const char openapi_html[] PROGMEM = R"rawliteral(
       openapi: "3.0.0",
       info: {
         title: "ESP32 DHT22 Sensor API",
-        version: "1.0.0",
+        version: "1.1.0",
         description: "REST API for ESP32 sensor and device control"
       },
       servers: [{ url: location.origin }],
@@ -143,10 +148,43 @@ const char openapi_html[] PROGMEM = R"rawliteral(
         "/api/factory-reset": { post: { summary: "Factory Reset", parameters: [{ name: "key", in: "query", required: true, schema: { type: "string" } }], responses: { 200: { description: "Resetting" } } } },
         "/metrics": { get: { summary: "Prometheus Metrics", responses: { 200: { description: "Exposes Prometheus format metrics" } } } },
         "/api/status": { get: { summary: "Device Status", responses: { 200: { description: "Returns temperature, humidity, IP, uptime" } } } }
+        "/update": { post: { summary: "OTA Upload", parameters: [{ name: "key", in: "query", required: true, schema: { type: "string" } }], requestBody: { content: { "multipart/form-data": { schema: { type: "object", properties: { update: { type: "string", format: "binary" } } } } }, required: true }, responses: { 200: { description: "Firmware update result" } } } }
       }
     };
     window.onload = () => SwaggerUIBundle({ spec, dom_id: '#swagger-ui' });
   </script>
+</body>
+</html>
+)rawliteral";
+
+// Firmware Upload Webpage
+const char fw_upload_html[] PROGMEM = R"rawliteral(
+<!DOCTYPE html><html><body>
+<h2>OTA Firmware Update</h2>
+<form id='form' method='POST' action='/update?key=secret123' enctype='multipart/form-data'>
+  <input type='file' name='update'><br>
+  <progress id='bar' value='0' max='100' style='width:300px;'></progress><br>
+  <input type='submit' value='Update'>
+</form>
+<p id='msg'></p>
+<script>
+  const form = document.getElementById('form');
+  const bar = document.getElementById('bar');
+  const msg = document.getElementById('msg');
+  form.onsubmit = e => {
+    e.preventDefault();
+    const xhr = new XMLHttpRequest();
+    xhr.upload.onprogress = e => {
+      bar.value = (e.loaded / e.total) * 100;
+    };
+    xhr.onload = () => {
+      msg.textContent = 'Update ' + xhr.responseText;
+      form.style.display = 'none';
+    };
+    xhr.open('POST', form.action);
+    xhr.send(new FormData(form));
+  };
+</script>
 </body>
 </html>
 )rawliteral";
@@ -163,8 +201,8 @@ void setup(){
   
   // Load WiFi credentials from Preferences
   prefs.begin("wifi", true);
-  ssid = prefs.getString("ssid", "default");
-  password = prefs.getString("password", "default1234!");
+  ssid = prefs.getString("ssid", "Obi-Wlan-Kenobi");
+  password = prefs.getString("password", "Qaywsx1234!");
   prefs.end();
 
   // Load sensor interval
@@ -274,6 +312,50 @@ void setup(){
     serializeJson(doc, response);
     request->send(200, "application/json", response);
   });
+
+  // Serve OTA upload page (GET)
+server.on("/update", HTTP_GET, [](AsyncWebServerRequest *request){
+  if (!checkAdminKey(request)) {
+    return request->send(403, "text/plain", "Unauthorized");
+  }
+    request->send(200, "text/html", fw_upload_html);
+  });
+
+// Handle firmware upload (POST)
+server.on("/update", HTTP_POST, [](AsyncWebServerRequest *request) {
+  if (!checkAdminKey(request)) {
+    return request->send(403, "text/plain", "Unauthorized");
+  }
+  request->send(200, "text/plain", (Update.hasError()) ? "FAIL" : "OK");
+  delay(100);
+  ESP.restart();
+}, [](AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final) {
+  if (!index){
+    Update.begin(UPDATE_SIZE_UNKNOWN);
+  }
+  Update.write(data, len);
+  if (final){
+    Update.end(true);
+  }
+});
+
+// Firmware version endpoint
+server.on("/about", HTTP_GET, [](AsyncWebServerRequest *request){
+  StaticJsonDocument<128> doc;
+  doc["version"] = firmwareVersion;
+  doc["build"] = buildTime;
+  String json;
+  serializeJson(doc, json);
+  request->send(200, "application/json", json);
+});
+
+/* Build Instructions
+1. In Arduino IDE: Sketch > Export compiled Binary
+2. Locate the `.bin` file in sketch folder
+3. Navigate to http://<ESP-IP>/update?key=secret123
+4. Upload the .bin file to update firmware
+*/
+
 
   server.begin();
 }
