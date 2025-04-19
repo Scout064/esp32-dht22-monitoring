@@ -6,7 +6,7 @@
     <a href="">
         <img src="https://img.shields.io/badge/Arduino_IDE_Compile-passed-brightgreen" /></a>
     <a href="">
-        <img src="https://img.shields.io/badge/Tested_on_ESP32-passed-green" /></a>
+        <img src="https://img.shields.io/badge/Tested_on_ESP32-passed-brightgreen" /></a>
     <a href="">
         <img src="https://img.shields.io/badge/Known_Issues-none-brightgreen" /></a>
     <a href="#further-development">
