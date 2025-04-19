@@ -1,12 +1,12 @@
 <p align="left">
+    <a href="https://github.com/Scout064/esp32-c6-dht22-monitoring/releases/tag/v1.1">
+        <img src="https://img.shields.io/badge/Latest_Stable_Release-v1.1-brightgreen" /></a>
     <a href="https://github.com/Scout064/esp32-c6-dht22-monitoring/releases/tag/v1.0">
-        <img src="https://img.shields.io/badge/Latest_Stable_Release-v1.0-brightgreen" /></a>
-    <a href="https://github.com/Scout064/esp32-c6-dht22-monitoring/releases/tag/v1.0">
-    <img src="https://img.shields.io/badge/Latest_Release-v1.1.0--beta-yellow" /></a>
+    <img src="https://img.shields.io/badge/Latest_Release-v1.1.1--alpha-red" /></a>
     <a href="">
         <img src="https://img.shields.io/badge/Arduino_IDE_Compile-passed-brightgreen" /></a>
     <a href="">
-        <img src="https://img.shields.io/badge/Tested_on_ESP32-in_progress-yellow" /></a>
+        <img src="https://img.shields.io/badge/Tested_on_ESP32-passed-green" /></a>
     <a href="">
         <img src="https://img.shields.io/badge/Known_Issues-none-brightgreen" /></a>
     <a href="#further-development">
