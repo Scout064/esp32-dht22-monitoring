@@ -25,6 +25,7 @@ Firmware for ESP32 that exposes a web server and REST API to access DHT22 sensor
 - Swagger UI at `/docs` for interactive API documentation
 - Prometheus metrics at `/metrics` for Grafana
 - CORS-enabled for frontend apps
+- Web OTA updates via `/update` (admin protected)
 - Admin key protected endpoints for sensitive operations
 
 ## 🌐 Endpoints
@@ -47,13 +48,14 @@ Firmware for ESP32 that exposes a web server and REST API to access DHT22 sensor
 |--------|---------------------|------|------------------------------------|
 | POST   | `/api/reboot`       | ✅   | Reboots the ESP32 device           |
 | POST   | `/api/factory-reset`| ✅   | Clears all preferences and restarts |
+| POST   | `/update`           | ✅   | Web-based OTA firmware upload      |
 
 ### Logging & Monitoring
 | Method | Path           | Auth | Description                         |
 |--------|----------------|------|-------------------------------------|
 | GET    | `/api/logs`    | ✅   | Returns last 10 log events          |
 | GET    | `/metrics`     | ❌   | Prometheus metrics format for scrape |
-| GET    | `/api/status`  | ❌   | JSON with temp, humidity, uptime, IP, SSID |
+| GET    | `/api/status`  | ❌   | JSON with temp, humidity, uptime, IP, SSID, FW Version, Buildtime |
 
 ### API Docs (Swagger)
 | Method | Path     | Auth | Description               |
@@ -103,7 +105,18 @@ scrape_configs:
       - targets: ['<ESP32-IP>:80']
 ```
 
-> Then import metrics like `esp32_temperature`, `esp32_humidity`, `esp32_uptime_seconds` in Grafana
+> Then import metrics like `esp32_temperature`, `esp32_humidity`, `esp32_uptime_seconds` in Grafana  
+
+## 🔁 Web OTA Update Instructions
+1. Navigate to: `http://<ESP32-IP>/update?key=secret123`
+2. Upload compiled `.bin` file from Arduino IDE/PlatformIO
+3. Wait for confirmation and auto-reboot
+
+## Build Instructions
+1. In Arduino IDE: Sketch > Export compiled Binary
+2. Locate the `.bin` file in sketch folder
+3. Navigate to http://<ESP-IP>/update?key=secret123
+4. Upload the .bin file to update firmware
 
 ## 📂 File Overview
 - `esp32-c6-hdt22-monitor.ino`: main firmware logic
