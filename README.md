@@ -6,7 +6,7 @@
     <a href="">
         <img src="https://img.shields.io/badge/Arduino_IDE_Compile-passed-brightgreen" /></a>
     <a href="">
-        <img src="https://img.shields.io/badge/Tested_on_ESP32-passed-brightgreen" /></a>
+        <img src="https://img.shields.io/badge/Tested_on_ESP32-under_investigation-red" /></a>
     <a href="https://github.com/Scout064/esp32-dht22-monitoring/issues">
         <img src="https://img.shields.io/badge/Known_Issues-1-yellow" /></a>
     <a href="#further-development">
