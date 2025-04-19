@@ -10,7 +10,7 @@
 #include <Update.h>
 
 // Define Firmware Version
-const char* firmwareVersion = "1.1.0";
+const char* firmwareVersion = "1.1";
 const char* buildTime = __DATE__ " " __TIME__;
 
 // Network Credentials - loaded from Preferences
