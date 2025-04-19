@@ -1,0 +1,63 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "ESP32 DHT22 Sensor API",
+    "version": "1.1.2-alpha",
+    "description": "REST API for ESP32 sensor and device control"
+  },
+  "servers": [{ "url": "http://<ESP32-IP>" }],
+  "paths": {
+    "/temperature": { "get": { "summary": "Read Temperature", "responses": { "200": { "description": "Temperature" } } } },
+    "/humidity": { "get": { "summary": "Read Humidity", "responses": { "200": { "description": "Humidity" } } } },
+    "/metrics": { "get": { "summary": "Prometheus Metrics", "responses": { "200": { "description": "Prometheus metrics" } } } },
+    "/api/status": { "get": { "summary": "Device Status", "responses": { "200": { "description": "Sensor + system info" } } } },
+    "/api/wifi-status": { "get": { "summary": "WiFi Status", "responses": { "200": { "description": "WiFi connection state, RSSI, IP" } } } },
+    "/api/debug": {
+      "get": {
+        "summary": "Get last OTA error",
+        "parameters": [{ "name": "key", "in": "query", "required": true, "schema": { "type": "string" } }],
+        "responses": {
+          "200": {
+            "description": "Last OTA error message",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": { "lastOtaError": { "type": "string" } }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/reset-ota-log": {
+      "post": {
+        "summary": "Clear OTA error log",
+        "parameters": [{ "name": "key", "in": "query", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "OTA log cleared" } }
+      }
+    },
+    "/update": {
+      "post": {
+        "summary": "OTA Firmware Upload",
+        "parameters": [{ "name": "key", "in": "query", "required": true, "schema": { "type": "string" } }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "update": { "type": "string", "format": "binary" },
+                  "md5": { "type": "string", "format": "binary" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Firmware update result" } }
+      }
+    }
+  }
+}

@@ -13,10 +13,9 @@
         <img src="https://img.shields.io/badge/Development_Queue-1-blue" /></a>
 </p>
 
-
 # ESP32 DHT22 Sensor API Server
 
-Firmware for ESP32 that exposes a web server and REST API to access DHT22 sensor readings (temperature, humidity), configure WiFi and interval settings, and control device reboot or reset securely.
+Firmware for ESP32 that exposes a web server and REST API to access DHT22 sensor readings (temperature, humidity), configure WiFi and interval settings, control device reboot or reset, and perform secure web OTA updates.
 
 ## 🔧 Features
 - Read temperature and humidity from DHT22
@@ -26,6 +25,8 @@ Firmware for ESP32 that exposes a web server and REST API to access DHT22 sensor
 - Prometheus metrics at `/metrics` for Grafana
 - CORS-enabled for frontend apps
 - Web OTA updates via `/update` (admin protected)
+- Optional MD5 checksum validation for OTA uploads
+- Tracks and exposes last OTA error via API
 - Admin key protected endpoints for sensitive operations
 
 ## 🌐 Endpoints
@@ -51,11 +52,13 @@ Firmware for ESP32 that exposes a web server and REST API to access DHT22 sensor
 | POST   | `/update`           | ✅   | Web-based OTA firmware upload      |
 
 ### Logging & Monitoring
-| Method | Path           | Auth | Description                         |
-|--------|----------------|------|-------------------------------------|
-| GET    | `/api/logs`    | ✅   | Returns last 10 log events          |
-| GET    | `/metrics`     | ❌   | Prometheus metrics format for scrape |
-| GET    | `/api/status`  | ❌   | JSON with temp, humidity, uptime, IP, SSID, FW Version, Buildtime |
+| Method | Path                 | Auth | Description                                  |
+|--------|----------------------|------|----------------------------------------------|
+| GET    | `/api/logs`          | ✅   | Returns last 10 log events                   |
+| GET    | `/metrics`           | ❌   | Prometheus metrics format for scrape         |
+| GET    | `/api/status`        | ❌   | JSON with temp, humidity, uptime, IP, SSID, FW Version, Buildtime, OTA Error |
+| GET    | `/api/debug`         | ✅   | Returns latest OTA error string (if any)     |
+| POST   | `/api/reset-ota-log` | ✅   | Clears last recorded OTA error message       |
 
 ### API Docs (Swagger)
 | Method | Path     | Auth | Description               |
@@ -104,19 +107,13 @@ scrape_configs:
     static_configs:
       - targets: ['<ESP32-IP>:80']
 ```
-
 > Then import metrics like `esp32_temperature`, `esp32_humidity`, `esp32_uptime_seconds` in Grafana  
 
 ## 🔁 Web OTA Update Instructions
 1. Navigate to: `http://<ESP32-IP>/update?key=secret123`
 2. Upload compiled `.bin` file from Arduino IDE/PlatformIO
-3. Wait for confirmation and auto-reboot
-
-## Build Instructions
-1. In Arduino IDE: Sketch > Export compiled Binary
-2. Locate the `.bin` file in sketch folder
-3. Navigate to http://<ESP-IP>/update?key=secret123
-4. Upload the .bin file to update firmware
+3. (Optional) Upload `.txt` file with MD5 hash of `.bin`
+4. Wait for confirmation and auto-reboot if update is valid
 
 ## 📂 File Overview
 - `esp32-c6-hdt22-monitor.ino`: main firmware logic
