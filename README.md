@@ -1,16 +1,16 @@
 <p align="left">
     <a href="https://github.com/Scout064/esp32-dht22-monitoring/releases/tag/v1.1">
         <img src="https://img.shields.io/badge/Latest_Stable_Release-v1.1-brightgreen" /></a>
-    <a href="https://github.com/Scout064/esp32-dht22-monitoring/releases/tag/v1.1.3-alpha">
-    <img src="https://img.shields.io/badge/Latest_Release-v1.1.3--alpha-red" /></a>
+    <a href="https://github.com/Scout064/esp32-dht22-monitoring/releases/tag/v1.1.5-alpha">
+    <img src="https://img.shields.io/badge/Latest_Release-v1.1.5--alpha-red" /></a>
     <a href="">
         <img src="https://img.shields.io/badge/Arduino_IDE_Compile-passed-brightgreen" /></a>
     <a href="">
-        <img src="https://img.shields.io/badge/Tested_on_ESP32-under_investigation-red" /></a>
+        <img src="https://img.shields.io/badge/Tested_on_ESP32-passed-brightgreen" /></a>
     <a href="https://github.com/Scout064/esp32-dht22-monitoring/issues">
-        <img src="https://img.shields.io/badge/Known_Issues-1-yellow" /></a>
+        <img src="https://img.shields.io/badge/Known_Issues-0-brightgreen" /></a>
     <a href="#further-development">
-        <img src="https://img.shields.io/badge/Development_Queue-1-blue" /></a>
+        <img src="https://img.shields.io/badge/Development_Queue-0-blue" /></a>
 </p>
 
 # ESP32 DHT22 Sensor API Server
@@ -26,7 +26,8 @@ Firmware for ESP32 that exposes a web server and REST API to access DHT22 sensor
 - CORS-enabled for frontend apps
 - Web OTA updates via `/update` (admin protected)
 - Optional MD5 checksum validation for OTA uploads
-- Tracks and exposes last OTA error via API
+- Tracks and exposes last OTA error + both MD5s via `/api/debug`
+- Upload `.txt` file first, then `.bin` firmware for integrity check
 - Admin key protected endpoints for sensitive operations
 
 ## 🌐 Endpoints
@@ -49,7 +50,8 @@ Firmware for ESP32 that exposes a web server and REST API to access DHT22 sensor
 |--------|---------------------|------|------------------------------------|
 | POST   | `/api/reboot`       | ✅   | Reboots the ESP32 device           |
 | POST   | `/api/factory-reset`| ✅   | Clears all preferences and restarts |
-| POST   | `/update`           | ✅   | Web-based OTA firmware upload      |
+| GET    | `/update`           | ✅   | Web-based OTA HTML upload form     |
+| POST   | `/update`           | ✅   | Upload `md5` (.txt) or `update` (.bin)     |
 
 ### Logging & Monitoring
 | Method | Path                 | Auth | Description                                  |
@@ -57,7 +59,7 @@ Firmware for ESP32 that exposes a web server and REST API to access DHT22 sensor
 | GET    | `/api/logs`          | ✅   | Returns last 10 log events                   |
 | GET    | `/metrics`           | ❌   | Prometheus metrics format for scrape         |
 | GET    | `/api/status`        | ❌   | JSON with temp, humidity, uptime, IP, SSID, FW Version, Buildtime, OTA Error |
-| GET    | `/api/debug`         | ✅   | Returns latest OTA error string (if any)     |
+| GET    | `/api/debug`         | ✅   | Returns last OTA error, expected & actual MD5 |
 | POST   | `/api/reset-ota-log` | ✅   | Clears last recorded OTA error message       |
 
 ### API Docs (Swagger)
@@ -111,13 +113,23 @@ scrape_configs:
 
 ## 🔁 Web OTA Update Instructions
 1. Navigate to: `http://<ESP32-IP>/update?key=secret123`
-2. Upload compiled `.bin` file from Arduino IDE/PlatformIO
-3. (Optional) Upload `.txt` file with MD5 hash of `.bin`
-4. Wait for confirmation and auto-reboot if update is valid
+2. **Upload `.txt` file** first containing MD5 checksum of `.bin`
+3. **Then upload** compiled `.bin` file from Arduino IDE/PlatformIO
+4. Wait for confirmation — if MD5 matches, ESP32 reboots automatically
+
+**MD5 Upload Example:**
+```bash
+curl -F 'md5=@firmware.md5.txt' http://<ESP32-IP>/update?key=secret123
+```
+
+**Firmware Upload Example:**
+```bash
+curl -F 'update=@firmware_v1.1.1-alpha.bin' http://<ESP32-IP>/update?key=secret123
+```
 
 ## 📂 File Overview
 - `esp32-c6-hdt22-monitor.ino`: main firmware logic
-- `OpenAPI.json`: file to import into Postman for example
+- `OpenAPI.json`: file to import into Postman or Swagger UI
 
 ---
 

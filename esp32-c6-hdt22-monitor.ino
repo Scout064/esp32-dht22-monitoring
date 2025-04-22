@@ -8,10 +8,19 @@
 #include <ArduinoJson.h>
 #include <Preferences.h>
 #include <Update.h>
+#include <MD5Builder.h>
 
 // Define Firmware Version
-const char* firmwareVersion = "1.1";
+const char* firmwareVersion = "1.1.5-alpha";
 const char* buildTime = __DATE__ " " __TIME__;
+
+// Define dynamic String for md5 hasch check of .bin
+String expectedMD5 = "";
+String calculatedMD5 = "";
+MD5Builder otaMd5;
+
+// Define dynamic String for OTA Error
+String lastOtaError = "";
 
 // Network Credentials - loaded from Preferences
 String ssid, password;
@@ -147,7 +156,10 @@ const char openapi_html[] PROGMEM = R"rawliteral(
         "/api/factory-reset": { post: { summary: "Factory Reset", parameters: [{ name: "key", in: "query", required: true, schema: { type: "string" } }], responses: { 200: { description: "Resetting" } } } },
         "/metrics": { get: { summary: "Prometheus Metrics", responses: { 200: { description: "Exposes Prometheus format metrics" } } } },
         "/api/status": { get: { summary: "Device Status", responses: { 200: { description: "Returns temperature, humidity, IP, uptime" } } } },
-        "/update": { post: { summary: "OTA Upload", parameters: [{ name: "key", in: "query", required: true, schema: { type: "string" } }], requestBody: { content: { "multipart/form-data": { schema: { type: "object", properties: { update: { type: "string", format: "binary" } } } } }, required: true }, responses: { 200: { description: "Firmware update result" } } } }
+        "/update": { post: { summary: "OTA Upload", parameters: [{ name: "key", in: "query", required: true, schema: { type: "string" } }], requestBody: { content: { "multipart/form-data": { schema: { type: "object", properties: { update: { type: "string", format: "binary" } } } } }, required: true }, responses: { 200: { description: "Firmware update result" } } } },
+        "/api/debug": { get: { summary: "Get last OTA error", parameters: [{ name: "key", in: "query", required: true, schema: { type: "string" } }], responses: { 200: { description: "Returns the last OTA error message", content: { "application/json": { schema: { type: "object", properties: { lastOtaError: { type: "string" } } } } } } } } },
+"/api/reset-ota-log": { post: { summary: "Clear OTA error log", parameters: [{ name: "key", in: "query", required: true, schema: { type: "string" } }], responses: { 200: { description: "Confirmation that OTA log was cleared" } } } },
+        "/api/wifi-status": { get: { summary: "WiFi Status", responses: { 200: { description: "Returns WiFi connection status, IP, RSSI" } } } } }], responses: { 200: { description: "Confirmation that OTA log was cleared" } } } } }], requestBody: { content: { "multipart/form-data": { schema: { type: "object", properties: { update: { type: "string", format: "binary" } } } } }, required: true }, responses: { 200: { description: "Firmware update result" } } } }
       }
     };
     window.onload = () => SwaggerUIBundle({ spec, dom_id: '#swagger-ui' });
@@ -160,32 +172,54 @@ const char openapi_html[] PROGMEM = R"rawliteral(
 const char fw_upload_html[] PROGMEM = R"rawliteral(
 <!DOCTYPE html><html><body>
 <h2>OTA Firmware Update</h2>
-<form id='form' method='POST' action='/update?key=secret123' enctype='multipart/form-data'>
+<h3>Step 1: Upload MD5 (.txt)</h3>
+<form id='md5Form' method='POST' enctype='multipart/form-data'>
+  <input type='file' name='md5'><br>
+  <button type='submit'>Upload MD5</button>
+</form>
+<h3>Step 2: Upload Firmware (.bin)</h3>
+<form id='binForm' method='POST' action='/update?key=secret123' enctype='multipart/form-data'>
   <input type='file' name='update'><br>
-  <progress id='bar' value='0' max='100' style='width:300px;'></progress><br>
-  <input type='submit' value='Update'>
+  <input type='submit' value='Upload Firmware' id='binBtn' disabled>
 </form>
 <p id='msg'></p>
+<progress id='bar' value='0' max='100' style='width:300px;'></progress>
 <script>
-  const form = document.getElementById('form');
   const bar = document.getElementById('bar');
   const msg = document.getElementById('msg');
-  form.onsubmit = e => {
+  const binBtn = document.getElementById('binBtn');
+
+  document.getElementById('md5Form').onsubmit = e => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    fetch('/update?key=secret123', { method: 'POST', body: formData })
+      .then(r => r.text())
+      .then(txt => {
+        msg.innerText = 'MD5 uploaded';
+        msg.style.color = 'green';
+        binBtn.disabled = false;
+      })
+      .catch(err => {
+        msg.innerText = 'MD5 upload failed';
+        msg.style.color = 'red';
+      });
+  };
+
+  document.getElementById('binForm').onsubmit = e => {
     e.preventDefault();
     const xhr = new XMLHttpRequest();
     xhr.upload.onprogress = e => {
       bar.value = (e.loaded / e.total) * 100;
     };
     xhr.onload = () => {
-      msg.textContent = 'Update ' + xhr.responseText;
-      form.style.display = 'none';
+      msg.innerText = 'Firmware upload: ' + xhr.responseText;
+      msg.style.color = xhr.responseText.toLowerCase().includes('fail') ? 'red' : 'green';
     };
-    xhr.open('POST', form.action);
-    xhr.send(new FormData(form));
+    xhr.open('POST', '/update?key=secret123');
+    xhr.send(new FormData(e.target));
   };
 </script>
-</body>
-</html>
+</body></html>
 )rawliteral";
 
 // Replaces HTML template vars with live values
@@ -195,8 +229,15 @@ String processor(const String& var){
   return String();
 }
 
-void setup(){
+void reconnectWiFi();
+unsigned long lastReconnectAttempt = 0;
+int retryCount = 0;
+bool ledBlinkMode = false;
+
+void setup() {
   Serial.begin(115200);
+pinMode(LED_BUILTIN, OUTPUT);
+digitalWrite(LED_BUILTIN, LOW);
   
   // Load WiFi credentials from Preferences
   prefs.begin("wifi", true);
@@ -300,19 +341,20 @@ void setup(){
   });
 
   // Combined status endpoint (sensor + system)
-  server.on("/api/status", HTTP_GET, [](AsyncWebServerRequest *request) {
-    StaticJsonDocument<256> doc;
-    doc["temperature"] = readDHTTemperature().toFloat();
-    doc["humidity"] = readDHTHumidity().toFloat();
-    doc["uptime"] = millis() / 1000;
-    doc["ip"] = WiFi.localIP().toString();
-    doc["ssid"] = ssid;
-    doc["firmware"] = firmwareVersion;
-    doc["buildtime"] = buildTime;
-    String response;
-    serializeJson(doc, response);
-    request->send(200, "application/json", response);
-  });
+server.on("/api/status", HTTP_GET, [](AsyncWebServerRequest *request) {
+  StaticJsonDocument<256> doc;
+  doc["temperature"] = readDHTTemperature().toFloat();
+  doc["humidity"] = readDHTHumidity().toFloat();
+  doc["uptime"] = millis() / 1000;
+  doc["ip"] = WiFi.localIP().toString();
+  doc["ssid"] = ssid;
+  doc["version"] = firmwareVersion;
+  doc["build"] = buildTime;
+  doc["lastOtaError"] = lastOtaError;
+  String response;
+  serializeJson(doc, response);
+  request->send(200, "application/json", response);
+});
 
   // Serve OTA upload page (GET)
 server.on("/update", HTTP_GET, [](AsyncWebServerRequest *request){
@@ -322,25 +364,112 @@ server.on("/update", HTTP_GET, [](AsyncWebServerRequest *request){
     request->send(200, "text/html", fw_upload_html);
   });
 
-// Handle firmware upload (POST)
+// Handle OTA upload (POST)
 server.on("/update", HTTP_POST, [](AsyncWebServerRequest *request) {
   if (!checkAdminKey(request)) {
     return request->send(403, "text/plain", "Unauthorized");
   }
-  request->send(200, "text/plain", (Update.hasError()) ? "FAIL" : "OK");
-  delay(100);
-  ESP.restart();
+  String result;
+  bool ok = !Update.hasError();
+
+  if (expectedMD5 == "INVALID_MD5") {
+    result = "FAIL (Invalid MD5 format uploaded)";
+    ok = false;
+  } else if (!expectedMD5.isEmpty() && expectedMD5 != calculatedMD5) {
+    result = "FAIL (MD5 mismatch: expected " + expectedMD5 + ", got " + calculatedMD5 + ")";
+    ok = false;
+  } else {
+    result = ok ? "OK" : "FAIL (write error)";
+  }
+
+  if (ok) {
+    lastOtaError = "";
+    request->send(200, "text/plain", result);
+    delay(100);
+    ESP.restart();
+  } else {
+    lastOtaError = result;
+    request->send(200, "text/plain", result);
+    Serial.println("OTA failed: " + result);
+  }
+  expectedMD5 = "";
+  calculatedMD5 = "";
 }, [](AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final) {
-  if (!index){
+  if (filename.endsWith(".txt")) {
+    if (index == 0) expectedMD5 = "";
+    for (size_t i = 0; i < len; ++i) {
+      if (isxdigit(data[i])) expectedMD5 += (char)data[i];
+    }
+    expectedMD5.trim(); expectedMD5.toLowerCase();
+    bool isHex = expectedMD5.length() == 32;
+    for (size_t i = 0; i < expectedMD5.length(); i++) {
+      if (!isxdigit(expectedMD5.charAt(i))) { isHex = false; break; }
+    }
+    if (!isHex) expectedMD5 = "INVALID_MD5";
+    return;
+  }
+  if (!index) {
     Update.begin(UPDATE_SIZE_UNKNOWN);
+    otaMd5.begin();
   }
   Update.write(data, len);
-  if (final){
+  otaMd5.add(data, len);
+  if (final) {
     Update.end(true);
+    otaMd5.calculate();
+    calculatedMD5 = otaMd5.toString();
   }
 });
 
+// Debug endpoint to expose last OTA failure (if any)
+server.on("/api/debug", HTTP_GET, [](AsyncWebServerRequest *request){
+  if (!checkAdminKey(request)) {
+    return request->send(403, "text/plain", "Unauthorized");
+  }
+  StaticJsonDocument<256> doc;
+  doc["lastOtaError"] = lastOtaError;
+  doc["expectedMD5"] = expectedMD5;
+  doc["calculatedMD5"] = calculatedMD5;
+
+  // Attempt to compute actual MD5 of last uploaded firmware if available
+  if (Update.isRunning()) {
+    MD5Builder md5;
+    md5.begin();
+    // Cannot access past upload stream directly once done, so this value is placeholder unless streamed manually
+    md5.add("firmware_data_unavailable_after_upload");
+    md5.calculate();
+    doc["calculatedMD5"] = md5.toString();
+  } else {
+    if (calculatedMD5.isEmpty()) doc["calculatedMD5"] = "N/A";
+  }
+
+  String json;
+  serializeJson(doc, json);
+  request->send(200, "application/json", json);
+});
+
+// Endpoint to manually clear OTA error log
+server.on("/api/reset-ota-log", HTTP_POST, [](AsyncWebServerRequest *request){
+  if (!checkAdminKey(request)) {
+    return request->send(403, "text/plain", "Unauthorized");
+  }
+  lastOtaError = "";
+  request->send(200, "text/plain", "lastOtaError cleared");
+});
+
 // Firmware version endpoint
+// WiFi status endpoint
+server.on("/api/wifi-status", HTTP_GET, [](AsyncWebServerRequest *request){
+  StaticJsonDocument<128> doc;
+  doc["connected"] = WiFi.status() == WL_CONNECTED;
+  doc["ip"] = WiFi.localIP().toString();
+  doc["ssid"] = WiFi.SSID();
+  doc["rssi"] = WiFi.RSSI();
+  String json;
+  serializeJson(doc, json);
+  request->send(200, "application/json", json);
+});
+
 server.on("/about", HTTP_GET, [](AsyncWebServerRequest *request){
   StaticJsonDocument<128> doc;
   doc["version"] = firmwareVersion;
@@ -362,5 +491,43 @@ server.on("/about", HTTP_GET, [](AsyncWebServerRequest *request){
 }
 
 void loop() {
-  // Nothing required here
+  static unsigned long wifiOfflineStart = 0;
+  unsigned long now = millis();
+
+  // WiFi reconnect logic
+    if (WiFi.status() != WL_CONNECTED) {
+    if (wifiOfflineStart == 0) wifiOfflineStart = now;
+  } else {
+    wifiOfflineStart = 0;
+  }
+
+  if (WiFi.status() != WL_CONNECTED && !ledBlinkMode) {
+    if ((now - lastReconnectAttempt > 60000 && retryCount < 5) ||
+        (retryCount >= 5 && now - lastReconnectAttempt > 300000)) {
+      Serial.println("Attempting to reconnect WiFi...");
+      WiFi.disconnect();
+      WiFi.begin(ssid.c_str(), password.c_str());
+      lastReconnectAttempt = now;
+      retryCount++;
+      if (retryCount >= 6) {
+        if (now - wifiOfflineStart > 1800000) {
+          Serial.println("WiFi offline for over 30 minutes. Rebooting...");
+          ESP.restart();
+        }
+        ledBlinkMode = true;
+      }
+    }
+  }
+
+  // Blink onboard LED every 2s if in failure mode
+  if (ledBlinkMode && now % 2000 < 100) {
+    digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
+  }
+}
+
+void reconnectWiFi() {
+  retryCount = 0;
+  lastReconnectAttempt = millis();
+  WiFi.disconnect();
+  WiFi.begin(ssid.c_str(), password.c_str());
 }
