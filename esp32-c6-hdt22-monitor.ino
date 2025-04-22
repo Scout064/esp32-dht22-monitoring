@@ -11,7 +11,7 @@
 #include <MD5Builder.h>
 
 // Define Firmware Version
-const char* firmwareVersion = "1.1.5-alpha";
+const char* firmwareVersion = "1.2-beta";
 const char* buildTime = __DATE__ " " __TIME__;
 
 // Define dynamic String for md5 hasch check of .bin
@@ -228,11 +228,6 @@ String processor(const String& var){
   if (var == "HUMIDITY") return readDHTHumidity();
   return String();
 }
-
-void reconnectWiFi();
-unsigned long lastReconnectAttempt = 0;
-int retryCount = 0;
-bool ledBlinkMode = false;
 
 void setup() {
   Serial.begin(115200);
@@ -491,43 +486,47 @@ server.on("/about", HTTP_GET, [](AsyncWebServerRequest *request){
 }
 
 void loop() {
-  static unsigned long wifiOfflineStart = 0;
+  static unsigned long heartbeatTimer = 0;
+  static bool isLedOn = false;
+  static bool otaFailed = false;
+  static unsigned long otaBlinkTimer = 0;
+  static bool otaLedState = false;
   unsigned long now = millis();
 
-  // WiFi reconnect logic
-    if (WiFi.status() != WL_CONNECTED) {
-    if (wifiOfflineStart == 0) wifiOfflineStart = now;
-  } else {
-    wifiOfflineStart = 0;
-  }
-
-  if (WiFi.status() != WL_CONNECTED && !ledBlinkMode) {
-    if ((now - lastReconnectAttempt > 60000 && retryCount < 5) ||
-        (retryCount >= 5 && now - lastReconnectAttempt > 300000)) {
-      Serial.println("Attempting to reconnect WiFi...");
-      WiFi.disconnect();
-      WiFi.begin(ssid.c_str(), password.c_str());
-      lastReconnectAttempt = now;
-      retryCount++;
-      if (retryCount >= 6) {
-        if (now - wifiOfflineStart > 1800000) {
-          Serial.println("WiFi offline for over 30 minutes. Rebooting...");
-          ESP.restart();
-        }
-        ledBlinkMode = true;
+#ifdef RGB_BUILTIN
+  // Check for OTA failure condition to override LED status
+  otaFailed = !lastOtaError.isEmpty();
+  if (otaFailed) {
+    if (now - otaBlinkTimer > 500) {
+      otaBlinkTimer = now;
+      otaLedState = !otaLedState;
+      if (otaLedState) {
+        rgbLedWrite(RGB_BUILTIN, 0, 0, 255); // Blue flash for OTA error
+      } else {
+        rgbLedWrite(RGB_BUILTIN, 0, 0, 0);   // Off
       }
     }
+    return; // skip normal LED state when error
   }
 
-  // Blink onboard LED every 2s if in failure mode
-  if (ledBlinkMode && now % 2000 < 100) {
-    digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
+  if (WiFi.status() != WL_CONNECTED) {
+    unsigned long cycle = (now / 1000) % 8;
+    if (cycle < 2) {
+      rgbLedWrite(RGB_BUILTIN, 255, 255, 0); // Yellow
+    } else if (cycle < 4) {
+      rgbLedWrite(RGB_BUILTIN, 255, 0, 0);   // Green
+    } else {
+      rgbLedWrite(RGB_BUILTIN, 0, 0, 0);     // Off
+    }
+  } else {
+    if (now - heartbeatTimer >= 2000) {
+      heartbeatTimer = now;
+      isLedOn = true;
+      rgbLedWrite(RGB_BUILTIN, 255, 0, 0);   // Green
+    } else if (isLedOn && now - heartbeatTimer >= 1000) {
+      rgbLedWrite(RGB_BUILTIN, 0, 0, 0);     // Off
+      isLedOn = false;
+    }
   }
-}
-
-void reconnectWiFi() {
-  retryCount = 0;
-  lastReconnectAttempt = millis();
-  WiFi.disconnect();
-  WiFi.begin(ssid.c_str(), password.c_str());
+#endif
 }
