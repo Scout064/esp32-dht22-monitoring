@@ -25,7 +25,7 @@ Firmware for ESP32 that exposes a web server and REST API to access DHT22 sensor
 - Prometheus metrics at `/metrics` for Grafana
 - CORS-enabled for frontend apps
 - Web OTA updates via `/update` (admin protected)
-- Optional MD5 checksum validation for OTA uploads
+- MD5 checksum validation for OTA uploads (Not Optional)
 - Tracks and exposes last OTA error + both MD5s via `/api/debug`
 - Upload `.txt` file first, then `.bin` firmware for integrity check
 - Admin key protected endpoints for sensitive operations
