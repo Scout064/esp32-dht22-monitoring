@@ -2,189 +2,94 @@
   "openapi": "3.0.0",
   "info": {
     "title": "ESP32 DHT22 Sensor API",
-    "version": "1.0.0",
-    "description": "REST API for accessing sensor data and configuring an ESP32 with DHT22"
+    "version": "1.1.2-alpha",
+    "description": "REST API for ESP32 sensor and device control"
   },
   "servers": [
     {
-      "url": "http://{esp32-ip}",
-      "description": "ESP32 Local Device",
-      "variables": {
-        "esp32-ip": {
-          "default": "192.168.1.100"
-        }
-      }
+      "url": "http://<ESP32-IP>"
     }
   ],
   "paths": {
     "/temperature": {
       "get": {
-        "summary": "Get temperature",
+        "summary": "Read Temperature",
         "responses": {
           "200": {
-            "description": "Temperature in Celsius",
-            "content": { "text/plain": { "schema": { "type": "string" } } }
+            "description": "Temperature"
           }
         }
       }
     },
     "/humidity": {
       "get": {
-        "summary": "Get humidity",
+        "summary": "Read Humidity",
         "responses": {
           "200": {
-            "description": "Humidity in percent",
-            "content": { "text/plain": { "schema": { "type": "string" } } }
+            "description": "Humidity"
           }
         }
       }
     },
-    "/api/update-wifi": {
-      "post": {
-        "summary": "Update WiFi credentials",
-        "parameters": [
-          {
-            "name": "key",
-            "in": "query",
-            "required": true,
-            "schema": { "type": "string" }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/x-www-form-urlencoded": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "ssid": { "type": "string" },
-                  "password": { "type": "string" }
-                },
-                "required": ["ssid", "password"]
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": { "description": "WiFi credentials updated" },
-          "403": { "description": "Unauthorized" }
-        }
-      }
-    },
-    "/api/update-interval": {
-      "post": {
-        "summary": "Update sensor read interval",
-        "parameters": [
-          {
-            "name": "key",
-            "in": "query",
-            "required": true,
-            "schema": { "type": "string" }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/x-www-form-urlencoded": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "interval": { "type": "integer", "minimum": 500 }
-                },
-                "required": ["interval"]
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": { "description": "Interval updated" }
-        }
-      }
-    },
-    "/api/update-key": {
-      "post": {
-        "summary": "Update admin key",
-        "parameters": [
-          {
-            "name": "key",
-            "in": "query",
-            "required": true,
-            "schema": { "type": "string" }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/x-www-form-urlencoded": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "newkey": { "type": "string" }
-                },
-                "required": ["newkey"]
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": { "description": "Key updated" }
-        }
-      }
-    },
-    "/api/reboot": {
-      "post": {
-        "summary": "Reboot device",
-        "parameters": [
-          {
-            "name": "key",
-            "in": "query",
-            "required": true,
-            "schema": { "type": "string" }
-          }
-        ],
-        "responses": {
-          "200": { "description": "Device rebooting" }
-        }
-      }
-    },
-    "/api/factory-reset": {
-      "post": {
-        "summary": "Factory reset device",
-        "parameters": [
-          {
-            "name": "key",
-            "in": "query",
-            "required": true,
-            "schema": { "type": "string" }
-          }
-        ],
-        "responses": {
-          "200": { "description": "Preferences cleared, reboot triggered" }
-        }
-      }
-    },
-    "/api/logs": {
+    "/metrics": {
       "get": {
-        "summary": "Get logs",
+        "summary": "Prometheus Metrics",
+        "responses": {
+          "200": {
+            "description": "Prometheus metrics"
+          }
+        }
+      }
+    },
+    "/api/status": {
+      "get": {
+        "summary": "Device Status",
+        "responses": {
+          "200": {
+            "description": "Sensor + system info"
+          }
+        }
+      }
+    },
+    "/api/wifi-status": {
+      "get": {
+        "summary": "WiFi Status",
+        "responses": {
+          "200": {
+            "description": "WiFi connection state, RSSI, IP"
+          }
+        }
+      }
+    },
+    "/api/debug": {
+      "get": {
+        "summary": "Get last OTA error",
         "parameters": [
           {
             "name": "key",
             "in": "query",
             "required": true,
-            "schema": { "type": "string" }
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
           "200": {
-            "description": "Array of recent log messages",
+            "description": "Last OTA error message",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "logs": {
-                      "type": "array",
-                      "items": { "type": "string" }
+                    "lastOtaError": {
+                      "type": "string"
+                    },
+                    "expectedMD5": {
+                      "type": "string"
+                    },
+                    "calculatedMD5": {
+                      "type": "string"
                     }
                   }
                 }
@@ -192,6 +97,86 @@
             }
           }
         }
+      }
+    },
+    "/api/reset-ota-log": {
+      "post": {
+        "summary": "Clear OTA error log",
+        "parameters": [
+          {
+            "name": "key",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OTA log cleared"
+          }
+        }
+      }
+    },
+    "/update": {
+      "post": {
+        "summary": "OTA Firmware Upload (MD5 + .bin)",
+        "parameters": [
+          {
+            "name": "key",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "md5": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "MD5 checksum file (32 hex chars)"
+                  },
+                  "update": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "Firmware binary file (.bin)"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Firmware update result"
+          }
+        }
+      },
+      "get": {
+        "summary": "OTA Firmware Upload Page",
+        "responses": {
+          "200": {
+            "description": "HTML form to upload md5 and bin files"
+          }
+        },
+        "parameters": [
+          {
+            "name": "key",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
       }
     }
   }
