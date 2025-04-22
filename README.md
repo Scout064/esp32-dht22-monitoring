@@ -1,8 +1,8 @@
 <p align="left">
     <a href="https://github.com/Scout064/esp32-dht22-monitoring/releases/tag/v1.1">
         <img src="https://img.shields.io/badge/Latest_Stable_Release-v1.1-brightgreen" /></a>
-    <a href="https://github.com/Scout064/esp32-dht22-monitoring/releases/tag/v1.1.3-alpha">
-    <img src="https://img.shields.io/badge/Latest_Release-v1.1.3--alpha-red" /></a>
+    <a href="https://github.com/Scout064/esp32-dht22-monitoring/releases/tag/v1.1.5-alpha">
+    <img src="https://img.shields.io/badge/Latest_Release-v1.1.5--alpha-red" /></a>
     <a href="">
         <img src="https://img.shields.io/badge/Arduino_IDE_Compile-passed-brightgreen" /></a>
     <a href="">
@@ -10,7 +10,7 @@
     <a href="https://github.com/Scout064/esp32-dht22-monitoring/issues">
         <img src="https://img.shields.io/badge/Known_Issues-0-brightgreen" /></a>
     <a href="#further-development">
-        <img src="https://img.shields.io/badge/Development_Queue-1-blue" /></a>
+        <img src="https://img.shields.io/badge/Development_Queue-0-blue" /></a>
 </p>
 
 
