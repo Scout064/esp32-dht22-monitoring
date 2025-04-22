@@ -1,8 +1,8 @@
 <p align="left">
     <a href="https://github.com/Scout064/esp32-dht22-monitoring/releases/tag/v1.1">
         <img src="https://img.shields.io/badge/Latest_Stable_Release-v1.1-brightgreen" /></a>
-    <a href="https://github.com/Scout064/esp32-dht22-monitoring/releases/tag/v1.1.5-alpha">
-    <img src="https://img.shields.io/badge/Latest_Release-v1.1.5--alpha-red" /></a>
+    <a href="https://github.com/Scout064/esp32-dht22-monitoring/releases/tag/v1.2-beta">
+    <img src="https://img.shields.io/badge/Latest_Release-v1.2--beta-yellow" /></a>
     <a href="">
         <img src="https://img.shields.io/badge/Arduino_IDE_Compile-passed-brightgreen" /></a>
     <a href="">
@@ -126,6 +126,19 @@ curl -F 'md5=@firmware.md5.txt' http://<ESP32-IP>/update?key=secret123
 ```bash
 curl -F 'update=@firmware_v1.1.1-alpha.bin' http://<ESP32-IP>/update?key=secret123
 ```
+
+## 🔴 RGB LED Behavior
+This project uses a WS2812 RGB LED (GRB format) to signal device state:
+
+| State             | LED Color | Pattern                    |
+|------------------|-----------|----------------------------|
+| WiFi Connected   | Green     | Blinks 1s every 2s        |
+| WiFi Disconnected| Yellow    | On 2s                      |
+|                  | Green     | On 2s                      |
+|                  | Off       | 4s pause before repeating  |
+| OTA Error        | Blue      | Flashes every 0.5s         |
+
+> The RGB uses GRB format (Green, Red, Blue)
 
 ## 📂 File Overview
 - `esp32-c6-hdt22-monitor.ino`: main firmware logic
